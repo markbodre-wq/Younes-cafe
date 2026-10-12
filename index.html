@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17324D">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>مقهى يونس - دفتر الحسابات</title>
+<style>
+:root{
+  --paper:#F1F4F0; --card:#fff; --ink:#17324D; --ink2:#566B7F; --line:#D8E0D9;
+  --debt:#B3261E; --debt-bg:#FBEAE8; --paid:#1E7A4F; --paid-bg:#E3F2EA;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:"Noto Sans Arabic","Noto Naskh Arabic",system-ui,Tahoma,sans-serif;
+  background:var(--paper);color:var(--ink);font-size:17px;line-height:1.5;
+  font-variant-numeric:tabular-nums;padding-bottom:calc(96px + env(safe-area-inset-bottom));
+}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-action:manipulation}
+input{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #3B7DD8;outline-offset:2px}
+
+/* الشريط العلوي */
+.top{background:var(--ink);color:#fff;padding:calc(env(safe-area-inset-top) + 14px) 16px 18px}
+.top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.top small{display:block;opacity:.78;font-size:14px}
+.total{font-size:36px;font-weight:700;line-height:1.25}
+.icon-btn{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:inherit;flex:none}
+.icon-btn:active{background:rgba(127,127,127,.22)}
+
+.tools{padding:12px 12px 4px;display:flex;flex-direction:column;gap:10px}
+.search{width:100%;height:48px;border:1.5px solid var(--line);border-radius:12px;padding:0 14px;background:var(--card)}
+.chips{display:flex;gap:8px}
+.chip{height:38px;padding:0 16px;border-radius:19px;border:1.5px solid var(--line);background:var(--card);font-size:15px}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+
+.banner{margin:10px 12px 0;padding:10px 14px;border-radius:12px;background:#FFF3D6;color:#6B4A00;font-size:15px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.banner button{font-weight:700;color:#6B4A00;text-decoration:underline;white-space:nowrap}
+
+/* قائمة الزبائن */
+#list{margin-top:10px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:68px;padding:12px 16px;background:var(--card);border-bottom:1px dotted #B9C5BC;text-align:start}
+.row:active{background:#E8EEE9}
+.who{min-width:0}
+.who b{display:block;font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{font-size:14px;color:var(--ink2)}
+.bal{font-weight:700;font-size:19px;white-space:nowrap}
+.bal.owes{color:var(--debt)} .bal.clear{color:var(--paid);font-size:15px;font-weight:600} .bal.credit{color:var(--paid)}
+.empty{padding:40px 24px;text-align:center;color:var(--ink2)}
+
+.fab{position:fixed;inset-inline-end:16px;bottom:calc(16px + env(safe-area-inset-bottom));height:56px;padding:0 22px;border-radius:28px;background:var(--ink);color:#fff;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(23,50,77,.35);z-index:5}
+.fab:active{transform:scale(.97)}
+
+/* صفحة الزبون */
+#detail{position:fixed;inset:0;background:var(--paper);overflow-y:auto;z-index:20;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+.dtop{display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top) + 8px) 8px 8px;background:var(--ink);color:#fff}
+.dname{flex:1;min-width:0}
+.dname b{display:block;font-size:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tel{color:#BFD3E6;font-size:15px;text-decoration:none}
+.balance{margin:14px 12px 0;padding:16px 18px;border-radius:16px;border-inline-start:8px solid var(--ink2);background:var(--card);display:flex;flex-direction:column}
+.balance .lbl{font-size:15px;color:var(--ink2)}
+.balance strong{font-size:46px;line-height:1.2}
+.balance.owes{background:var(--debt-bg);border-color:var(--debt)} .balance.owes strong{color:var(--debt)}
+.balance.clear,.balance.credit{background:var(--paid-bg);border-color:var(--paid)} .balance.clear strong,.balance.credit strong{color:var(--paid)}
+.bump{animation:bump .35s ease-out}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.035)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.bump{animation:none}}
+
+.btn{display:flex;align-items:center;justify-content:center;height:54px;border-radius:14px;font-weight:700;font-size:18px;width:100%}
+.btn.pay{background:var(--paid);color:#fff;margin:12px 12px 0;width:calc(100% - 24px)}
+.btn.pay:disabled{background:#B9C5BC;color:#fff}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.ghost{background:#E8EEE9;color:var(--ink)}
+.btn.danger{background:var(--debt-bg);color:var(--debt)}
+.btn:active{filter:brightness(.92)}
+
+h2{font-size:16px;margin:22px 16px 8px;color:var(--ink2);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 12px}
+.drink{min-height:70px;border-radius:14px;background:var(--card);border:1.5px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 4px;line-height:1.3}
+.drink b{font-size:16px}
+.drink span{font-size:14px;color:var(--ink2)}
+.drink:active{background:var(--ink);color:#fff;border-color:var(--ink)} .drink:active span{color:#D3DEE9}
+.custom{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;padding:0 12px}
+.custom .btn{grid-column:1/-1;height:48px}
+.field{height:50px;width:100%;border:1.5px solid var(--line);border-radius:12px;padding:0 14px;background:var(--card)}
+
+.hist{margin:0 12px;background:var(--card);border-radius:14px;overflow:hidden}
+.h-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px dotted #B9C5BC}
+.h-row:last-child{border-bottom:0}
+.h-main{flex:1;min-width:0}
+.h-main b{display:block;font-weight:600}
+.h-amt{font-weight:700;white-space:nowrap}
+.h-amt.o{color:var(--debt)} .h-amt.p{color:var(--paid)}
+.h-del{width:40px;height:40px;border-radius:50%;color:var(--ink2);display:grid;place-items:center}
+.h-del:active{background:var(--debt-bg);color:var(--debt)}
+
+/* النوافذ */
+dialog{border:0;padding:0;width:100%;max-width:520px;margin:auto auto 0;border-radius:22px 22px 0 0;background:var(--paper);color:var(--ink);max-height:92vh;overflow-y:auto}
+dialog::backdrop{background:rgba(10,25,40,.55)}
+.sheet{padding:18px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px}
+.sheet h3{margin:0;font-size:20px}
+.sheet label{font-size:15px;color:var(--ink2);display:block;margin-bottom:4px}
+.err{color:var(--debt);font-size:15px;min-height:1.3em}
+.hint{font-size:15px;color:var(--ink2)}
+.actions{display:flex;gap:8px}
+.actions .btn{flex:1}
+.menu-row{display:grid;grid-template-columns:1fr 90px 44px;gap:6px;margin-bottom:6px}
+.menu-row .field{height:44px}
+.sec{border-top:1px solid var(--line);padding-top:12px}
+
+#toast{position:fixed;inset-inline:12px;bottom:calc(88px + env(safe-area-inset-bottom));background:#14202C;color:#fff;border-radius:14px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+#toast button{color:#9CC7FF;font-weight:700;white-space:nowrap}
+
+/* هوية مقهى يونس */
+.top{padding-bottom:16px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:50px;height:50px;border-radius:14px;background:#F1F4F0;color:var(--ink);display:grid;place-items:center;flex:none}
+.brand-txt{flex:1;min-width:0}
+.brand-txt h1{margin:0;font-size:25px;line-height:1.2;font-weight:800;letter-spacing:0}
+.brand-txt span{font-size:14px;opacity:.78}
+.debt-box{margin-top:14px}
+.today{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.today div{background:rgba(255,255,255,.1);border-radius:12px;padding:8px 12px}
+.today b{display:block;font-size:18px}
+.awning{height:16px;background:repeating-linear-gradient(90deg,var(--ink) 0 24px,#fff 24px 48px);border-bottom:3px solid var(--ink);margin-bottom:2px}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 12px}
+.qbtn{height:56px;border-radius:14px;background:var(--card);border:1.5px solid var(--line);font-weight:700;font-size:20px}
+.qbtn:active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.custom{display:grid;grid-template-columns:1.3fr 1fr;gap:8px;padding:0 12px}
+.custom .amt{height:56px;font-size:24px;font-weight:700}
+.custom .btn{grid-column:auto;height:56px;font-size:17px}
+.custom .note{grid-column:1/-1;height:46px}
+.balance strong{font-size:52px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 48 48" width="34" height="34"><path d="M9 20h23v8a11 11 0 0 1-11 11h-1A11 11 0 0 1 9 28z" fill="currentColor"/><path d="M32 23h3a5 5 0 0 1 0 10h-3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M15 8v7M21 6v9M27 8v7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity=".7"/></svg>
+    </div>
+    <div class="brand-txt"><h1>مقهى يونس</h1><span>دفتر حسابات الزبائن</span></div>
+    <button class="icon-btn" id="btnSettings" aria-label="الإعدادات"></button>
+  </div>
+  <div class="debt-box">
+    <small>إجمالي الديون المستحقة</small>
+    <div class="total" id="total">0</div>
+    <small id="count"></small>
+  </div>
+  <div class="today">
+    <div><small>أُضيف اليوم</small><b id="todayOrders">0</b></div>
+    <div><small>قُبض اليوم</small><b id="todayPaid">0</b></div>
+  </div>
+</header>
+<div class="awning" aria-hidden="true"></div>
+
+<div class="banner" id="warnStorage" hidden>
+  <span>التخزين غير متاح في هذا المتصفح، لن تُحفظ البيانات بعد الإغلاق.</span>
+</div>
+<div class="banner" id="backupBanner" hidden>
+  <span id="backupText"></span>
+  <button id="backupNow">حفظ الآن</button>
+</div>
+
+<div class="tools">
+  <input class="search" id="search" type="search" placeholder="ابحث عن زبون بالاسم أو الرقم" autocomplete="off">
+  <div class="chips">
+    <button class="chip" data-f="all" aria-pressed="true">الكل</button>
+    <button class="chip" data-f="debt" aria-pressed="false">عليهم دين</button>
+  </div>
+</div>
+
+<main id="list"></main>
+
+<button class="fab" id="fabAdd"><span id="plusIcon"></span>زبون جديد</button>
+
+<!-- صفحة الزبون -->
+<section id="detail" hidden></section>
+
+<!-- نافذة: زبون جديد / تعديل -->
+<dialog id="dlgCustomer">
+  <div class="sheet">
+    <h3 id="cTitle">زبون جديد</h3>
+    <div><label for="cName">الاسم</label><input class="field" id="cName" maxlength="60" autocomplete="off"></div>
+    <div><label for="cPhone">رقم الهاتف (اختياري)</label><input class="field" id="cPhone" type="tel" inputmode="tel" maxlength="25" autocomplete="off"></div>
+    <div class="err" id="cErr"></div>
+    <div class="actions">
+      <button class="btn ghost" id="cCancel">إلغاء</button>
+      <button class="btn primary" id="cSave">حفظ</button>
+    </div>
+    <button class="btn danger" id="cDelete" hidden>حذف هذا الزبون</button>
+  </div>
+</dialog>
+
+<!-- نافذة: التسديد -->
+<dialog id="dlgPay">
+  <div class="sheet">
+    <h3>تسديد / خصم</h3>
+    <div class="hint">المستحق الآن: <b id="payDue"></b></div>
+    <div>
+      <label for="payAmt">المبلغ المدفوع</label>
+      <input class="field" id="payAmt" type="text" inputmode="decimal" autocomplete="off" placeholder="0">
+    </div>
+    <button class="btn ghost" id="payAll" style="height:44px">دفع المبلغ كاملاً</button>
+    <div class="hint" id="payLeft" style="min-height:1.5em"></div>
+    <div class="err" id="payErr"></div>
+    <div class="actions">
+      <button class="btn ghost" id="payCancel">إلغاء</button>
+      <button class="btn pay" id="payOk" style="margin:0;width:auto">تسديد</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- نافذة: الإعدادات -->
+<dialog id="dlgSettings">
+  <div class="sheet">
+    <h3>الإعدادات</h3>
+    <div>
+      <label for="sCur">اسم العملة</label>
+      <input class="field" id="sCur" maxlength="12" autocomplete="off">
+    </div>
+    <div class="sec">
+      <label for="sQuick">مبالغ الإضافة السريعة (افصل بينها بفاصلة)</label>
+      <input class="field" id="sQuick" inputmode="decimal" autocomplete="off" placeholder="5, 10, 15, 20">
+    </div>
+    <div class="sec">
+      <label>النسخ الاحتياطي</label>
+      <div class="hint" style="margin-bottom:8px">البيانات محفوظة داخل هذا الهاتف فقط. احفظ نسخة من وقت لآخر.</div>
+      <div class="actions">
+        <button class="btn ghost" id="btnExport">حفظ نسخة</button>
+        <button class="btn ghost" id="btnImport">استعادة نسخة</button>
+      </div>
+      <input type="file" id="fileIn" accept=".json,application/json" hidden>
+    </div>
+    <div class="sec">
+      <button class="btn danger" id="btnWipe">مسح كل البيانات</button>
+    </div>
+    <button class="btn primary" id="sClose">تم</button>
+  </div>
+</dialog>
+
+<!-- نافذة: تأكيد -->
+<dialog id="dlgConfirm">
+  <div class="sheet">
+    <h3 id="confMsg" style="font-size:18px;line-height:1.6"></h3>
+    <div class="actions">
+      <button class="btn ghost" id="confNo">إلغاء</button>
+      <button class="btn danger" id="confYes">تأكيد</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" hidden></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- التخزين ---------- */
+const KEY = 'cafe-ledger-v1';
+const DEFAULT_QUICK = [5, 10, 15, 20, 30, 50];
+let storageOK = true;
+
+const fresh = () => ({v:1, currency:'درهم', quick:[...DEFAULT_QUICK], customers:[], lastBackup:0});
+
+function normalize(d){
+  const base = Object.assign(fresh(), d || {});
+  delete base.menu;
+  base.quick = Array.isArray(base.quick) ? base.quick.map(Number).filter(n => n > 0).slice(0, 9) : [];
+  if (!base.quick.length) base.quick = [...DEFAULT_QUICK];
+  if (!Array.isArray(base.customers)) base.customers = [];
+  base.customers = base.customers.filter(c => c && typeof c.name === 'string').map(c => ({
+    id: String(c.id || uid()), name: c.name, phone: c.phone ? String(c.phone) : '',
+    tx: Array.isArray(c.tx) ? c.tx.filter(t => t && isFinite(t.amount) && (t.type === 'order' || t.type === 'pay')) : []
+  }));
+  return base;
+}
+function load(){
+  try { const r = localStorage.getItem(KEY); if (r) return normalize(JSON.parse(r)); }
+  catch (e) { storageOK = false; }
+  return fresh();
+}
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(db)); }
+  catch (e) { storageOK = false; $('warnStorage').hidden = false; }
+}
+
+/* ---------- أدوات ---------- */
+const $ = id => document.getElementById(id);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const round2 = n => Math.round(n * 100) / 100;
+const getC = id => db.customers.find(c => c.id === id);
+const balance = c => round2(c.tx.reduce((s, t) => s + (t.type === 'pay' ? -t.amount : t.amount), 0));
+const fmtN = n => n.toLocaleString('en-US', {maximumFractionDigits:2});
+const fmt = n => fmtN(n) + (db.currency ? ' ' + db.currency : '');
+function num(s){
+  s = String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[٫,،]/g, '.').trim();
+  const n = parseFloat(s);
+  return isFinite(n) ? n : NaN;
+}
+function h(tag, props, ...kids){
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})){
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  kids.flat().forEach(c => { if (c != null && c !== false) e.append(c instanceof Node ? c : String(c)); });
+  return e;
+}
+const ICONS = {
+  back:'<path d="M9 5l7 7-7 7"/>',
+  sliders:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16v4z"/>',
+  close:'<path d="M6 6l12 12M18 6L6 18"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>'
+};
+function svg(name, size = 24){
+  const t = document.createElement('template');
+  t.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+  return t.content.firstChild;
+}
+function ago(ts){
+  const day = t => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+  const n = Math.round((day(Date.now()) - day(ts)) / 864e5);
+  if (n <= 0) return 'اليوم';
+  if (n === 1) return 'أمس';
+  if (n === 2) return 'قبل يومين';
+  if (n <= 10) return `قبل ${n} أيام`;
+  return `قبل ${n} يوماً`;
+}
+function dateText(ts){
+  try { return new Date(ts).toLocaleString('ar-u-nu-latn', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}); }
+  catch (e) { return new Date(ts).toLocaleString(); }
+}
+
+let toastTimer;
+function toast(msg, undo){
+  const t = $('toast'); t.replaceChildren(h('span', {}, msg));
+  if (undo) t.append(h('button', {onclick:() => { undo(); t.hidden = true; }}, 'تراجع'));
+  t.hidden = false; clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+}
+function confirmBox(msg, yesLabel, fn){
+  $('confMsg').textContent = msg; $('confYes').textContent = yesLabel || 'تأكيد';
+  $('confYes').onclick = () => { $('dlgConfirm').close(); fn(); };
+  $('dlgConfirm').showModal();
+}
+
+/* ---------- الحالة ---------- */
+let db = load();
+let cur = null, filter = 'all', query = '', editingId = null, payFor = null;
+
+/* ---------- القائمة الرئيسية ---------- */
+function renderList(){
+  const owing = db.customers.filter(c => balance(c) > 0);
+  $('total').textContent = fmt(owing.reduce((s, c) => s + balance(c), 0));
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  let tOrd = 0, tPay = 0;
+  db.customers.forEach(c => c.tx.forEach(t => { if (t.ts >= t0.getTime()) { if (t.type === 'pay') tPay += t.amount; else tOrd += t.amount; } }));
+  $('todayOrders').textContent = fmt(round2(tOrd)); $('todayPaid').textContent = fmt(round2(tPay));
+  $('count').textContent = owing.length ? `${owing.length} زبون عليهم دين` : 'لا توجد ديون';
+
+  const stale = db.customers.length && (Date.now() - db.lastBackup > 7 * 864e5);
+  $('backupBanner').hidden = !stale;
+  if (stale) $('backupText').textContent = db.lastBackup ? 'مرّ أكثر من أسبوع على آخر نسخة احتياطية.' : 'لم تحفظ نسخة احتياطية بعد.';
+  $('warnStorage').hidden = storageOK;
+
+  const q = query.trim().toLowerCase();
+  const rows = db.customers
+    .filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone || '').includes(q))
+    .filter(c => filter === 'all' || balance(c) > 0)
+    .sort((a, b) => balance(b) - balance(a) || a.name.localeCompare(b.name, 'ar'));
+
+  const list = $('list'); list.replaceChildren();
+  if (!rows.length){
+    list.append(h('div', {class:'empty'},
+      db.customers.length ? 'لا توجد نتائج.' : 'لا يوجد زبائن بعد. اضغط «زبون جديد» لإضافة أول حساب.'));
+    return;
+  }
+  rows.forEach(c => {
+    const b = balance(c), last = c.tx.length ? c.tx[c.tx.length - 1].ts : null;
+    list.append(h('button', {class:'row', onclick:() => openCustomer(c.id)},
+      h('div', {class:'who'}, h('b', {}, c.name), h('span', {class:'sub'}, last ? 'آخر حركة: ' + ago(last) : 'لا توجد حركات')),
+      h('div', {class:'bal ' + (b > 0 ? 'owes' : b < 0 ? 'credit' : 'clear')},
+        b > 0 ? fmt(b) : b < 0 ? 'له ' + fmt(-b) : 'خالص')));
+  });
+}
+
+/* ---------- صفحة الزبون ---------- */
+function openCustomer(id){
+  cur = id; renderDetail(); $('detail').hidden = false; $('detail').scrollTop = 0;
+  try { history.pushState({d:1}, ''); } catch (e) {}
+}
+function closeDetail(fromPop){
+  if ($('detail').hidden) return;
+  $('detail').hidden = true; cur = null; renderList();
+  if (!fromPop) { try { if (history.state && history.state.d) history.back(); } catch (e) {} }
+}
+window.addEventListener('popstate', () => {
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+  closeDetail(true);
+});
+
+function addOrder(c, amount, label){
+  amount = round2(amount);
+  if (!(amount > 0)) return false;
+  const t = {id:uid(), type:'order', amount, label:label || '', ts:Date.now()};
+  c.tx.push(t); save(); renderDetail(true); renderList();
+  toast(`أُضيف ${fmt(amount)} على الحساب`, () => removeTx(c, t.id, true));
+  return true;
+}
+function removeTx(c, id, quiet){
+  c.tx = c.tx.filter(t => t.id !== id); save(); renderDetail(); renderList();
+  if (!quiet) toast('تم حذف الحركة');
+}
+
+function renderDetail(bump){
+  const c = getC(cur);
+  if (!c) { closeDetail(true); return; }
+  const box = $('detail'), st = box.scrollTop; box.replaceChildren();
+  const b = balance(c);
+
+  const quickGrid = h('div', {class:'quick'});
+  db.quick.forEach(v => quickGrid.append(h('button', {class:'qbtn', onclick:() => addOrder(c, v, '')}, '+ ' + fmtN(v))));
+
+  const amt = h('input', {class:'field amt', id:'cuAmt', type:'text', inputmode:'decimal', placeholder:'المبلغ', autocomplete:'off'});
+  const note = h('input', {class:'field note', id:'cuNote', type:'text', placeholder:'ملاحظة (اختياري)', maxlength:'40', autocomplete:'off'});
+  const doAdd = () => {
+    const v = num(amt.value);
+    if (!(v > 0)) { amt.focus(); toast('أدخل مبلغاً صحيحاً'); return; }
+    addOrder(c, v, note.value.trim());
+  };
+
+  const hist = h('div', {class:'hist'});
+  const txs = [...c.tx].reverse();
+  if (!txs.length) hist.append(h('div', {class:'empty', style:'padding:20px'}, 'لا توجد حركات بعد.'));
+  txs.forEach(t => hist.append(h('div', {class:'h-row'},
+    h('div', {class:'h-main'}, h('b', {}, t.type === 'pay' ? 'تسديد' : (t.label || 'على الحساب')), h('span', {class:'sub'}, dateText(t.ts))),
+    h('div', {class:'h-amt ' + (t.type === 'pay' ? 'p' : 'o')}, (t.type === 'pay' ? '− ' : '+ ') + fmtN(t.amount)),
+    h('button', {class:'h-del', 'aria-label':'حذف الحركة',
+      onclick:() => confirmBox('حذف هذه الحركة من السجل؟', 'حذف', () => removeTx(c, t.id))}, svg('close', 20)))));
+
+  box.append(
+    h('div', {class:'dtop'},
+      h('button', {class:'icon-btn', 'aria-label':'رجوع', onclick:() => closeDetail()}, svg('back')),
+      h('div', {class:'dname'}, h('b', {}, c.name),
+        c.phone ? h('a', {class:'tel', href:'tel:' + c.phone.replace(/[^\d+]/g, '')}, c.phone) : null),
+      h('button', {class:'icon-btn', 'aria-label':'تعديل الزبون', onclick:() => openCustomerDialog(c.id)}, svg('edit'))),
+    h('section', {class:'balance ' + (b > 0 ? 'owes' : b < 0 ? 'credit' : 'clear') + (bump ? ' bump' : '')},
+      h('span', {class:'lbl'}, b > 0 ? 'المستحق عليه' : b < 0 ? 'له رصيد عندك' : 'الحساب خالص'),
+      h('strong', {}, fmt(Math.abs(b)))),
+    h('button', {class:'btn pay', disabled:b <= 0 ? '' : false, onclick:() => openPay(c.id)}, 'تسديد / خصم'),
+    h('h2', {}, 'أضف مبلغاً على الحساب'),
+    h('div', {class:'custom'}, amt, h('button', {class:'btn primary', onclick:doAdd}, 'أضف'), note),
+    h('h2', {}, 'إضافة سريعة'),
+    quickGrid,
+    h('h2', {}, 'السجل'),
+    hist
+  );
+  box.scrollTop = st;
+}
+
+/* ---------- زبون جديد / تعديل ---------- */
+function openCustomerDialog(id){
+  editingId = id || null; const c = id && getC(id);
+  $('cTitle').textContent = c ? 'تعديل الزبون' : 'زبون جديد';
+  $('cName').value = c ? c.name : ''; $('cPhone').value = c ? (c.phone || '') : '';
+  $('cDelete').hidden = !c; $('cErr').textContent = '';
+  $('dlgCustomer').showModal();
+  if (!c) setTimeout(() => $('cName').focus(), 60);
+}
+function saveCustomer(){
+  const name = $('cName').value.trim(), phone = $('cPhone').value.trim();
+  if (!name) { $('cErr').textContent = 'اكتب اسم الزبون.'; $('cName').focus(); return; }
+  if (editingId){
+    const c = getC(editingId); c.name = name; c.phone = phone; save();
+    $('dlgCustomer').close(); renderList(); if (cur) renderDetail();
+  } else {
+    const c = {id:uid(), name, phone, tx:[]}; db.customers.push(c); save();
+    $('dlgCustomer').close(); renderList(); openCustomer(c.id);
+  }
+}
+$('cSave').onclick = saveCustomer;
+$('cCancel').onclick = () => $('dlgCustomer').close();
+$('cName').addEventListener('keydown', e => { if (e.key === 'Enter') saveCustomer(); });
+$('cDelete').onclick = () => {
+  const c = getC(editingId), b = balance(c);
+  confirmBox(`حذف «${c.name}» مع كل سجله؟` + (b > 0 ? ` (عليه ${fmt(b)})` : '') + ' لا يمكن التراجع.', 'حذف', () => {
+    db.customers = db.customers.filter(x => x.id !== c.id); save();
+    $('dlgCustomer').close(); closeDetail(); renderList();
+  });
+};
+$('fabAdd').onclick = () => openCustomerDialog();
+
+/* ---------- التسديد ---------- */
+function openPay(id){
+  payFor = id; $('payDue').textContent = fmt(balance(getC(id)));
+  $('payAmt').value = ''; $('payErr').textContent = ''; updatePayPreview();
+  $('dlgPay').showModal(); setTimeout(() => $('payAmt').focus(), 60);
+}
+function updatePayPreview(){
+  const b = balance(getC(payFor)), a = num($('payAmt').value), out = $('payLeft');
+  if (!(a > 0)) { out.textContent = ''; return; }
+  const left = round2(b - a);
+  out.textContent = left >= 0 ? 'الباقي بعد التسديد: ' + fmt(left) : 'سيصبح له رصيد: ' + fmt(-left);
+}
+$('payAmt').addEventListener('input', updatePayPreview);
+$('payAll').onclick = () => { $('payAmt').value = balance(getC(payFor)); updatePayPreview(); };
+$('payCancel').onclick = () => $('dlgPay').close();
+$('payOk').onclick = () => {
+  const c = getC(payFor), a = round2(num($('payAmt').value));
+  if (!(a > 0)) { $('payErr').textContent = 'أدخل المبلغ المدفوع.'; return; }
+  const t = {id:uid(), type:'pay', amount:a, label:'', ts:Date.now()};
+  c.tx.push(t); save(); $('dlgPay').close(); renderDetail(true); renderList();
+  const left = balance(c);
+  toast(left > 0 ? `تم التسديد. الباقي ${fmt(left)}` : 'تم التسديد. الحساب خالص', () => removeTx(c, t.id, true));
+};
+
+/* ---------- الإعدادات ---------- */
+function parseQuick(s){ return s.split(/[,،\s]+/).map(num).filter(n => n > 0).map(round2).slice(0, 9); }
+$('btnSettings').append(svg('sliders'));
+$('plusIcon').append(svg('plus', 22));
+$('btnSettings').onclick = () => { $('sCur').value = db.currency; $('sQuick').value = db.quick.join(', '); $('dlgSettings').showModal(); };
+$('sCur').addEventListener('input', () => { db.currency = $('sCur').value.trim(); save(); });
+$('sQuick').addEventListener('change', () => {
+  const q = parseQuick($('sQuick').value);
+  if (q.length) { db.quick = q; save(); }
+  $('sQuick').value = db.quick.join(', ');
+});
+$('sClose').onclick = () => $('dlgSettings').close();
+$('dlgSettings').addEventListener('close', () => { renderList(); if (cur) renderDetail(); });
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(db, null, 1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cafe-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  db.lastBackup = Date.now(); save(); renderList();
+  toast('تم حفظ النسخة الاحتياطية في مجلد التنزيلات');
+}
+$('btnExport').onclick = exportData;
+$('backupNow').onclick = exportData;
+$('btnImport').onclick = () => $('fileIn').click();
+$('fileIn').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (!d || !Array.isArray(d.customers)) throw new Error('bad');
+      const nd = normalize(d);
+      confirmBox(`استبدال البيانات الحالية بالنسخة المختارة (${nd.customers.length} زبون)؟`, 'استعادة', () => {
+        db = nd; save(); $('dlgSettings').close(); closeDetail(); renderList(); toast('تمت استعادة النسخة');
+      });
+    } catch (err) { toast('الملف غير صالح'); }
+  };
+  r.readAsText(f); e.target.value = '';
+});
+$('btnWipe').onclick = () => confirmBox('مسح كل الزبائن والحسابات نهائياً؟ احفظ نسخة احتياطية أولاً.', 'مسح الكل', () => {
+  confirmBox('تأكيد أخير: سيتم حذف كل البيانات ولا يمكن استرجاعها.', 'نعم، امسح', () => {
+    db = fresh(); save(); $('dlgSettings').close(); closeDetail(); renderList(); toast('تم مسح البيانات');
+  });
+});
+
+/* ---------- البحث والتصفية ---------- */
+$('search').addEventListener('input', e => { query = e.target.value; renderList(); });
+document.querySelectorAll('.chip').forEach(ch => ch.onclick = () => {
+  filter = ch.dataset.f;
+  document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === ch)));
+  renderList();
+});
+
+/* ---------- إغلاق النوافذ بالضغط على الخلفية ---------- */
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+
+/* ---------- التشغيل ---------- */
+renderList();
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+})();
+</script>
+</body>
+</html>
